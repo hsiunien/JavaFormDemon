@@ -17,9 +17,11 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
+import java.util.List;
 
 import javax.swing.Action;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -27,33 +29,48 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+import com.ahsiu.apple6msg.server.Client;
+import com.ahsiu.apple6msg.server.SMSListener;
+import com.ahsiu.apple6msg.server.ServerClient;
+import com.ahsiu.apple6msg.server.moduls.ClientModul;
 import com.google.gson.Gson;
 
-public class MainFrame extends JFrame implements ActionListener {
+public class MainFrame extends JFrame implements ActionListener, SMSListener {
 	JPanel panel;
 	private JLabel labelIp;
 	private JLabel labelSms;
-	private JTextField tfIpAddress;
+	private JComboBox<Client> jcbClient;
 	private JTextField tfSMS;
 	private JButton btnOK;
 	private JButton btnExit;
-	private JButton btnConnect;
 	private JLabel labelStatus, labelStuResult;
 	private JTextField smsContent;
 	JPanel ipPanel;
 	private Clipboard clipbd = getToolkit().getSystemClipboard();
 	private Gson gson = new Gson();
+	private ServerClient server;
 
-	public MainFrame() {
+	public MainFrame(ServerClient server) {
+		this.server = server;
 		init();
 		this.setLocation(400, 300);
 		this.setSize(430, 180);
 		this.setTitle("iphone6短信自动发送器");
-		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		this.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		this.setVisible(true);
 	}
 
 	JTextField tfText;
+
+	public void addComBoxItem() {
+
+		List<Client> lists = server.getClients();
+		jcbClient.removeAllItems();
+		for (Client c : lists) {
+			jcbClient.addItem(c);
+		}
+
+	}
 
 	private void init() {
 		this.setLayout(new GridLayout(5, 1));
@@ -69,15 +86,10 @@ public class MainFrame extends JFrame implements ActionListener {
 		ipPanel.setLayout(new BorderLayout());
 		ipPanel.setMaximumSize(new Dimension(getWidth(), 10));
 		labelIp = new JLabel("手机IP:");
-		tfIpAddress = new JTextField(10);
-		tfIpAddress.setText("192.168.1.2");
-		btnConnect = new JButton();
-		btnConnect.setText("连接");
-		btnConnect.addActionListener(this);
+		jcbClient = new JComboBox<Client>();
 
 		ipPanel.add(labelIp, BorderLayout.WEST);
-		ipPanel.add(tfIpAddress);
-		ipPanel.add(btnConnect, BorderLayout.EAST);
+		ipPanel.add(jcbClient, BorderLayout.EAST);
 
 		JPanel copyPanel = new JPanel(new BorderLayout());
 		final JTextField mobileTxt = new JTextField(7);
@@ -115,14 +127,14 @@ public class MainFrame extends JFrame implements ActionListener {
 
 		labelSms = new JLabel("apple服务号码:");
 		tfSMS = new JTextField(10);
-		tfSMS.setText("0085264500366");
+		tfSMS.setText("64500366");
 		tfSMS.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 				if (e.getClickCount() >= 2) {
-					tfSMS.setText("64500366");
-				} else {
 					tfSMS.setText("0085264500366");
+				} else {
+					tfSMS.setText("64500366");
 				}
 				super.mouseClicked(e);
 
@@ -161,7 +173,7 @@ public class MainFrame extends JFrame implements ActionListener {
 	}
 
 	public static void main(String[] args) {
-		new MainFrame();
+		new MainFrame(new ServerClient());
 	}
 
 	private MouseAdapter mouseAdp = new MouseAdapter() {
@@ -192,7 +204,7 @@ public class MainFrame extends JFrame implements ActionListener {
 
 	private MouseAdapter copySms = new MouseAdapter() {
 		public void mousePressed(java.awt.event.MouseEvent e) {
-			 
+
 			if (e.getClickCount() == 2) {
 				StringSelection clipString = new StringSelection(
 						smsContent.getSelectedText());
@@ -200,7 +212,6 @@ public class MainFrame extends JFrame implements ActionListener {
 			}
 		};
 	};
-	MyClient client;
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
@@ -233,46 +244,54 @@ public class MainFrame extends JFrame implements ActionListener {
 			SMSData data = new SMSData();
 			data.setPhoneNum(phone);
 			data.setContent(content);
-			Message msg = new Message();
-			msg.setType(2);
+			Msg msg = new Msg();
+			msg.setType(3);
 			msg.setData(gson.toJson(data));
-			client.write(msg);
+			server.sendMsg((Client) jcbClient.getSelectedItem(), msg);
 		} else if (e.getActionCommand().equals("取消")) {
-			System.exit(0);
-		} else if (e.getActionCommand().equals("连接")) {
-			String ip = tfIpAddress.getText();
-			if (ip == null && "".equals(ip)) {
-				ip = "192.168.1.2";
-			}
-			client = new MyClient(ip);
-			client.setClientInterface(clientInterface);
-			client.getConnect();
-			Message msg = new Message();
-			msg.setType(1);
-			msg.setData("你好,连接成功，准备就绪");
-			client.write(msg);
+			dispose();
 		}
 	}
 
 	ClientInterface clientInterface = new ClientInterface() {
 
 		@Override
-		public void write(Message msg) {
+		public void write(Msg msg) {
 
 		}
 
 		@Override
-		public void read(Message msg) {
+		public void read(Msg msg) {
 			switch (msg.getType()) {
 			case 3:
 				labelStuResult.setText("读取成功，请双击短信复制");
-				smsContent.setText(msg.getData());
+				String smsData=msg.getData();
+				if(smsData.length()>12){
+					smsData=smsData.substring(12,smsData.length()-1);
+				}
+				smsContent.setText(smsData);
 				break;
 			default:
 				labelStuResult.setText(msg.getData());
 				break;
 			}
 		}
+
+		@Override
+		public void clientConnected(ClientModul clientModul) {
+			// TODO Auto-generated method stub
+
+		}
 	};
+
+	@Override
+	public void received(SMSData sms) {
+		labelStuResult.setText("读取成功，请双击短信复制");
+		String smsData=sms.getContent();
+		if(smsData.length()>5){
+			smsData=smsData.substring(smsData.length()-12);
+		}
+		smsContent.setText(smsData);
+	}
 
 }

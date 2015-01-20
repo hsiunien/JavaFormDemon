@@ -1,7 +1,11 @@
 package com.ahsiu.apple6msg;
 
-public interface ClientInterface {
-	public void read(Message msg);
+import com.ahsiu.apple6msg.server.moduls.ClientModul;
 
-	public void write(Message msg);
+public interface ClientInterface {
+	public void  clientConnected(ClientModul clientModul);
+	
+	public void read(Msg msg);
+
+	public void write(Msg msg);
 }

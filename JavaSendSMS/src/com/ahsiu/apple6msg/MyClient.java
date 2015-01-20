@@ -28,7 +28,7 @@ public class MyClient {
 		this.client = clientInterface;
 	}
 
-	public void write(Message msg) {
+	public void write(Msg msg) {
 		if (!released && os != null) {
 			try {
 				System.out.println("发送的：" + gson.toJson(msg));
@@ -63,12 +63,12 @@ public class MyClient {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			client.read(new Message(-1, "连接失败"));
+			client.read(new Msg(-1, "连接失败"));
 			released = true;
 		} catch (Exception e) {
 			e.printStackTrace();
 			released = true;
-			client.read(new Message(-1, "连接失败"));
+			client.read(new Msg(-1, "连接失败"));
 		}
 	}
 
@@ -104,9 +104,9 @@ public class MyClient {
 							String jsonStr = sb.toString();
 							System.out.println("接收的：" + jsonStr + "  lenth="
 									+ len);
-							Message cMsg = new Message();
+							Msg cMsg = new Msg();
 							try {
-								cMsg = gson.fromJson(jsonStr, Message.class);
+								cMsg = gson.fromJson(jsonStr, Msg.class);
 							} catch (JsonSyntaxException e) {
 								e.printStackTrace();
 								cMsg.setData(jsonStr);
